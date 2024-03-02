@@ -125,7 +125,7 @@ When using the cookie, use the intercept mode and do it one by one for each auth
 
 When doing downloads, use intercept and see if you can do directory traversal or fetch other files than what you're looking to downloads
 
-
+Look at the individual folders for the writeups I'll do.. They're literally a transcription of my notes that I take while working on these boxes. 
 
 # Good Resources 
 
