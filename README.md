@@ -139,4 +139,4 @@ GTFOBins
 Hack Tricks
 	https://book.hacktricks.xyz/network-services-pentesting/pentesting-snmp?source=post_page-----cc2d7b64da35--------------------------------
 
-
+<img src="x" onerror="document.body.innerHTML+='<iframe src=\'http://example.com\' width=\'800\' height=\'600\'></iframe>';">
