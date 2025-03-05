@@ -7,6 +7,7 @@ Subdomain enumeration
 * GoBuster - good for DNS searchers. Always use the -t 1000 switch while on VPN
 * DirSearch - Quick for directory searches 
 * FFuF - doesn't work that well on HTB vpns
+* Intruder with Burp works well. Slower than options above though. 
 
 
 nmap
@@ -45,6 +46,11 @@ find / -type f -perm -u=s 2>/dev/null
 Find Password in Derby.dat (ofbiz)
 ```
 grep -arin -o -E '(\w+\W+){0,5}password(\W+\w+){0,5}' .
+```
+
+Quick XSS Requesting outside site
+```
+<img src="x" onerror="document.body.innerHTML+='<iframe src=\'http://example.com\' width=\'800\' height=\'600\'></iframe>';">
 ```
 
 Sign in as admin
@@ -138,6 +144,4 @@ GTFOBins
 
 Hack Tricks
 	https://book.hacktricks.xyz/network-services-pentesting/pentesting-snmp?source=post_page-----cc2d7b64da35--------------------------------
-```
-<img src="x" onerror="document.body.innerHTML+='<iframe src=\'http://example.com\' width=\'800\' height=\'600\'></iframe>';">
-```
+
