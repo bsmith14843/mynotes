@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Centered Div with Images</title>
+<style>
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    background-color: #f0f0f0;
+    font-family: sans-serif;
+  }
+  .container {
+    width: 640px;
+    background-color: #cccccc;
+    /* Removed box-shadow */
+    text-align: center;
+    padding: 20px;
+  }
+  .full-width-image {
+    width: 100%;
+    height: auto;
+    display: block;
+    margin: 0 auto;
+  }
+  p {
+    margin: 20px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <img src="https://via.placeholder.com/640x200" alt="Top image" class="full-width-image">
+  
+  <p>
+    This is a simple HTML page with a centered div. 
+    The div is 640px wide and contains an image at both the top and the bottom. 
+    The images are also 640px wide, scaling to fit the container.
+  </p>
+  
+  <img src="https://via.placeholder.com/640x200" alt="Bottom image" class="full-width-image">
+</div>
+
+</body>
+</html>
